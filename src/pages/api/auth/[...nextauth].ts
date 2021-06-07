@@ -1,7 +1,6 @@
 import { query as q } from "faunadb";
 import NextAuth from "next-auth";
 import Providers from "next-auth/providers";
-import { CallTracker } from "node:assert";
 import { fauna } from "../../../services/fauna";
 
 export default NextAuth({

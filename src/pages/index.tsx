@@ -5,14 +5,14 @@ import { GetStaticProps } from "next";
 import { SubscribeButton } from "../components/SubscribeButton";
 import { stripe } from "../services/stripe";
 
-interface homeProps {
+interface HomeProps {
   product: {
     priceId: string;
     amount: number;
   };
 }
 
-export default function Home({ product }: homeProps) {
+export default function Home({ product }: HomeProps) {
   return (
     <>
       <Head>
@@ -40,7 +40,10 @@ export default function Home({ product }: homeProps) {
 export const getStaticProps: GetStaticProps = async () => {
   //executed inside the Node server
   const price = await stripe.prices.retrieve(
-    "price_1Ian4tERWCfDZ6A04mW5qf2W" //to access all infos from the product
+    "price_1Ian4tERWCfDZ6A04mW5qf2W"
+    // {
+    //   expand: ["product"],
+    // } //to access all infos from the product
   );
 
   const product = {

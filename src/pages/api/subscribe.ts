@@ -1,6 +1,16 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { stripe } from "../../services/stripe";
 import { getSession } from "next-auth/client";
+import { fauna } from "../../services/fauna";
+import { query as q } from "faunadb";
+
+type User = {
+  ref: {
+    id: string;
+  };
+
+  data: { stripe_customer_id: string };
+};
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === "POST") {
@@ -8,12 +18,32 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
       req,
     });
 
-    const stripeCustomer = await stripe.customers.create({
-      email: (await session).user.email,
-    });
+    const user = await fauna.query<User>(
+      q.Get(
+        q.Match(
+          q.Index("user_by_email"),
+          q.Casefold((await session).user.email)
+        )
+      )
+    );
 
+    let customerID = user.data.stripe_customer_id;
+
+    if (!customerID) {
+      const stripeCustomer = await stripe.customers.create({
+        email: (await session).user.email,
+      });
+
+      await fauna.query(
+        q.Update(q.Ref(q.Collection("users"), user.ref.id), {
+          data: { stripe_customer_id: stripeCustomer.id },
+        })
+      );
+
+      customerID = stripeCustomer.id;
+    }
     const stripeCheckoutSession = await stripe.checkout.sessions.create({
-      customer: stripeCustomer.id,
+      customer: customerID,
       payment_method_types: ["card"],
       billing_address_collection: "required",
       line_items: [
